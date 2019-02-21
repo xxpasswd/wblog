@@ -9,6 +9,7 @@ from app import app, db
 from app.forms import LoginForm, RegistrationForm, EditProfileForm
 from app.models import User
 
+
 @app.route('/')
 @login_required
 def index():
@@ -68,7 +69,7 @@ def user(username):
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    form = EditProfileForm()
+    form = EditProfileForm(current_user.username)
     if form.validate_on_submit():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
@@ -80,6 +81,37 @@ def edit_profile():
         form.about_me.data = current_user.about_me
     return render_template('edit_profile.html', form=form)
 
+
+@app.route('/follow/<username>')
+@login_required
+def follow(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash('User {} is not found'.format(username))
+        return redirect(url_for('index'))
+    elif current_user == user:
+        flash("You can't follow yourself")
+        return redirect(url_for('user', username=username))
+    current_user.follow(user)
+    db.session.commit()
+    flash('You are following {}'.format(username))
+    return redirect(url_for('user', username=username))
+
+
+@app.route('/unfollow/<username>')
+@login_required
+def unfollow(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash('User {} is not found'.format(username))
+        return redirect(url_for('index'))
+    elif current_user == user:
+        flash("You can't unfollow yourself")
+        return redirect(url_for('user', username=username))
+    current_user.unfollow(user)
+    db.session.commit()
+    flash('You are not following {}'.format(username))
+    return redirect(url_for('user', username=username))
 
 
 @app.before_request
